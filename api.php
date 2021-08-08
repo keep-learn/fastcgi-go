@@ -10,8 +10,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $name = $_POST['name'] ?? 'user';
     $ua = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown Agent';
 
-    echo $id . '-' . $name . ' from ' . $ua;
+    echo $id . '-' . $name . ' UserAgent: ' . $ua;
 } else {
-    echo 'Hello World';
+    echo 'other request method';
 }
 

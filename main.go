@@ -11,35 +11,35 @@ import (
 const HEAD_LEN = 8
 
 // fcgi_request_type 请求类型
-const FCGI_BEGIN_REQUEST      = 1
-const FCGI_ABORT_REQUEST      = 2
-const FCGI_END_REQUEST        = 3
-const FCGI_PARAMS             = 4
-const FCGI_STDIN              = 5
-const FCGI_STDOUT             = 6
-const FCGI_STDERR             = 7
-const FCGI_DATA               = 8
-const FCGI_GET_VALUES         = 9
-const FCGI_GET_VALUES_RESULT  = 10
-const FCGI_UNKNOWN_TYPE       = 11
+const FCGI_BEGIN_REQUEST = 1
+const FCGI_ABORT_REQUEST = 2
+const FCGI_END_REQUEST = 3
+const FCGI_PARAMS = 4
+const FCGI_STDIN = 5
+const FCGI_STDOUT = 6
+const FCGI_STDERR = 7
+const FCGI_DATA = 8
+const FCGI_GET_VALUES = 9
+const FCGI_GET_VALUES_RESULT = 10
+const FCGI_UNKNOWN_TYPE = 11
 
 // fcgi_role 服务器希望 fastcgi 充当的角色
-const FCGI_RESPONDER   = 1
-const FCGI_AUTHORIZER  = 2
-const FCGI_FILTER      = 3
+const FCGI_RESPONDER = 1
+const FCGI_AUTHORIZER = 2
+const FCGI_FILTER = 3
 
 // 记录 头 结构
 type FcgiHeader struct {
-	Version byte
-	Type byte
-	RequestId uint16
+	Version       byte
+	Type          byte
+	RequestId     uint16
 	ContentLength uint16
 	//RequestIdB1 byte
 	//RequestIdB0 byte
 	//ContentLengthB1 byte
 	//ContentLengthB0 byte
 	PaddingLength byte
-	Reserved byte
+	Reserved      byte
 }
 
 // 记录 请求开始 结构
@@ -47,7 +47,7 @@ type FcgiBeginRequestBody struct {
 	Role uint16
 	// RoleB1 byte
 	// RoleB0 byte
-	Flags byte
+	Flags    byte
 	Reserved [5]byte
 }
 
@@ -59,20 +59,23 @@ type FcgiEndRequestBody struct {
 	// AppStatusB1 byte
 	// AppStatusB0 byte
 	ProtocolStatus byte
-	Reserved [3]byte
+	Reserved       [3]byte
 }
 
 // 请求结束记录 的 协议状态
 const FCGI_REQUEST_COMPLETE = 0
-const FCGI_CANT_MPX_CONN    = 1
-const FCGI_OVERLOADED       = 2
-const FCGI_UNKNOWN_ROLE     = 3
+const FCGI_CANT_MPX_CONN = 1
+const FCGI_OVERLOADED = 2
+const FCGI_UNKNOWN_ROLE = 3
 
 func HeaderTypeName(code byte) string {
 	switch code {
-	case 1: return "FCGI_BEGIN_REQUEST"
-	case 4: return "FCGI_PARAMS"
-	case 5: return "FCGI_STDIN"
+	case 1:
+		return "FCGI_BEGIN_REQUEST"
+	case 4:
+		return "FCGI_PARAMS"
+	case 5:
+		return "FCGI_STDIN"
 	}
 	return ""
 }
@@ -81,8 +84,8 @@ func ReadHead(buff []byte) FcgiHeader {
 	head := FcgiHeader{
 		Version:       buff[0],
 		Type:          buff[1],
-		RequestId:     uint16(buff[2]) << 8 | uint16(buff[3]),
-		ContentLength: uint16(buff[4]) << 8 | uint16(buff[5]),
+		RequestId:     uint16(buff[2])<<8 | uint16(buff[3]),
+		ContentLength: uint16(buff[4])<<8 | uint16(buff[5]),
 		PaddingLength: buff[6],
 		Reserved:      buff[7],
 	}
@@ -111,7 +114,7 @@ func ReadConn(conn net.Conn, header FcgiHeader) []byte {
 
 func ReadBeginRequest(header FcgiHeader, conn net.Conn) {
 	buff := ReadConn(conn, header)
-	fmt.Println("Role", uint16(buff[0]) << 8 | uint16(buff[1]))
+	fmt.Println("Role", uint16(buff[0])<<8|uint16(buff[1]))
 	fmt.Println("Flag", buff[2])
 }
 
@@ -125,19 +128,19 @@ func ReadParamsRequest(header FcgiHeader, conn net.Conn) map[string]string {
 		}
 		keyLen := int(buff[pos])
 		if keyLen > 127 {
-			keyLen = int(buff[pos] << 24) | int(buff[pos+1] << 16) | int(buff[pos+2] << 8) | int(buff[pos+3])
+			keyLen = int(buff[pos]<<24) | int(buff[pos+1]<<16) | int(buff[pos+2]<<8) | int(buff[pos+3])
 			pos += 3
 		}
 		pos++
 		valLen := int(buff[pos])
 		if valLen > 127 {
-			valLen = int(buff[pos] << 24) | int(buff[pos+1] << 16) | int(buff[pos+2] << 8) | int(buff[pos+3])
+			valLen = int(buff[pos]<<24) | int(buff[pos+1]<<16) | int(buff[pos+2]<<8) | int(buff[pos+3])
 			pos += 3
 		}
 		pos++
-		key := string(buff[pos:pos+keyLen])
+		key := string(buff[pos : pos+keyLen])
 		pos += keyLen
-		value := string(buff[pos:pos+valLen])
+		value := string(buff[pos : pos+valLen])
 		kvMap[key] = value
 		pos += valLen
 	}
@@ -160,7 +163,7 @@ func ExecPhp(env map[string]string, data string) string {
 	for key, val := range env {
 		_ = os.Setenv(key, val)
 	}
-	cmd := exec.Command("php", env["SCRIPT_FILENAME"], "--post=" + data)
+	cmd := exec.Command("php", env["SCRIPT_FILENAME"], "--post="+data)
 	rs, err := cmd.Output()
 	if err != nil {
 		log.Fatal("Exec PHP Error")
@@ -210,57 +213,71 @@ func SendResponse(id uint16, content string, conn net.Conn) {
 		log.Fatal("Send Response Error")
 	}
 	fmt.Println("----- Send Response -----")
-	fmt.Println("Content", htmlHead + htmlBody)
+	fmt.Println("Content", htmlHead+htmlBody)
 }
 
 func main() {
 	server, _ := net.Listen("tcp", "127.0.0.1:9001")
 	fmt.Println("Start Listen Request")
-	conn, _ := server.Accept()
-	var id uint16
-	env := make(map[string]string)
-	var data string
-	process := make(map[string]bool)
+
 	for {
-		buff := make([]byte, HEAD_LEN)
-		if _, err := conn.Read(buff); err != nil {
-			_ = conn.Close()
-			if conn, err = server.Accept(); err != nil {
-				log.Fatal("Network Error")
-			} else {
-				if _, err = conn.Read(buff); err != nil {
-					log.Fatal("Network Error")
-				}
-			}
-		}
-		head := ReadHead(buff)
-		if id == 0 && head.RequestId != 0 {
-			id = head.RequestId
-		}
-		if id != head.RequestId {
+		conn, err := server.Accept()
+		if err != nil {
+			fmt.Println("Start Listen Request continue")
 			continue
 		}
-		switch head.Type {
-		case FCGI_BEGIN_REQUEST: ReadBeginRequest(head, conn)
-		case FCGI_PARAMS:
-			if newEnv := ReadParamsRequest(head, conn); len(newEnv) > 0 {
-				env = newEnv
+
+		go func(conn net.Conn) {
+			var id uint16
+			env := make(map[string]string)
+			var data string
+			process := make(map[string]bool)
+			for {
+				buff := make([]byte, HEAD_LEN)
+				if _, err := conn.Read(buff); err != nil {
+					_ = conn.Close()
+					if conn, err = server.Accept(); err != nil {
+						log.Fatal("Network Error")
+					} else {
+						if _, err = conn.Read(buff); err != nil {
+							log.Fatal("Network Error")
+						}
+					}
+				}
+				head := ReadHead(buff)
+				if id == 0 && head.RequestId != 0 {
+					id = head.RequestId
+				}
+				if id != head.RequestId {
+					continue
+				}
+				switch head.Type {
+				case FCGI_BEGIN_REQUEST:
+					ReadBeginRequest(head, conn)
+				case FCGI_PARAMS:
+					if newEnv := ReadParamsRequest(head, conn); len(newEnv) > 0 {
+						env = newEnv
+					}
+					process["params"] = true
+				case FCGI_STDIN:
+					if newData := ReadStdinRequest(head, conn); len(newData) > 0 {
+						data = newData
+					}
+					process["stdin"] = true
+				default:
+					log.Fatal("Unknown Request Type", head.Type)
+				}
+				if process["params"] && process["stdin"] {
+
+					rs := ExecPhp(env, data)
+					SendResponse(id, rs, conn)
+					//_, err = conn.Write([]byte(rs))
+					//conn.Close()
+					id = 0
+					process["params"] = false
+					process["stdin"] = false
+				}
 			}
-			process["params"] = true
-		case FCGI_STDIN:
-			if newData := ReadStdinRequest(head, conn); len(newData) > 0 {
-				data = newData
-			}
-			process["stdin"] = true
-		default:
-			log.Fatal("Unknown Request Type", head.Type)
-		}
-		if process["params"] && process["stdin"] {
-			rs := ExecPhp(env, data)
-			SendResponse(id, rs, conn)
-			id = 0
-			process["params"] = false
-			process["stdin"] = false
-		}
+		}(conn)
 	}
 }

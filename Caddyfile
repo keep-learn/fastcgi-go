@@ -1,3 +1,4 @@
-http://localhost:8080 {
-    fastcgi / 127.0.0.1:9001 php
+http://127.0.0.1:8070 {
+    file_server
+    php_fastcgi 127.0.0.1:9001
 }
